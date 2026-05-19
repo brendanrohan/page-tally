@@ -15,7 +15,7 @@ function coverUrl(isbn: string | null) {
   if (!isbn) return null;
   const clean = isbn.replace(/[^0-9Xx]/g, "");
   if (!clean) return null;
-  return `https://covers.openlibrary.org/b/isbn/${clean}-M.jpg`;
+  return `https://covers.openlibrary.org/b/isbn/${clean}-M.jpg?default=false`;
 }
 
 export function BookCard({

@@ -54,7 +54,7 @@ export const updateBook = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = {};
+    const patch: { shelf?: Shelf; stars?: number } = {};
     if (data.shelf !== undefined) patch.shelf = data.shelf;
     if (data.stars !== undefined) patch.stars = data.stars;
     const { error } = await context.supabase
