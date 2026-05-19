@@ -1,6 +1,13 @@
 import { useState } from "react";
 import { Star, X, Pencil } from "lucide-react";
 
+const SHELF_OPTIONS: { value: string; label: string }[] = [
+  { value: "currently_reading", label: "Currently Reading" },
+  { value: "on_hold", label: "On Hold" },
+  { value: "to_read", label: "To Read" },
+  { value: "finished", label: "Finished" },
+];
+
 export type Book = {
   id: string;
   title: string;
@@ -23,11 +30,13 @@ export function BookCard({
   onRate,
   onRemove,
   onEdit,
+  onMove,
 }: {
   book: Book;
   onRate: (stars: number) => void;
   onRemove: () => void;
   onEdit: () => void;
+  onMove: (shelf: string) => void;
 }) {
   const [imgFailed, setImgFailed] = useState(false);
   const url = coverUrl(book.isbn);
@@ -102,6 +111,18 @@ export function BookCard({
             );
           })}
         </div>
+        <select
+          value={book.shelf}
+          onChange={(e) => onMove(e.target.value)}
+          aria-label="Move to shelf"
+          className="mt-1.5 w-full text-[10px] bg-transparent text-muted-foreground border border-border/60 rounded px-1 py-0.5 hover:text-foreground hover:border-accent focus:outline-none focus:border-accent cursor-pointer"
+        >
+          {SHELF_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              Move to: {o.label}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   );
