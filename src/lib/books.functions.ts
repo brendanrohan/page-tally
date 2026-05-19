@@ -51,12 +51,18 @@ export const updateBook = createServerFn({ method: "POST" })
       id: z.string().uuid(),
       shelf: shelfSchema.optional(),
       stars: z.number().int().min(0).max(5).optional(),
+      title: z.string().trim().min(1).max(300).optional(),
+      author: z.string().trim().max(200).optional(),
+      isbn: z.string().trim().max(20).optional(),
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const patch: { shelf?: Shelf; stars?: number } = {};
+    const patch: { shelf?: Shelf; stars?: number; title?: string; author?: string | null; isbn?: string | null } = {};
     if (data.shelf !== undefined) patch.shelf = data.shelf;
     if (data.stars !== undefined) patch.stars = data.stars;
+    if (data.title !== undefined) patch.title = data.title;
+    if (data.author !== undefined) patch.author = data.author || null;
+    if (data.isbn !== undefined) patch.isbn = data.isbn || null;
     const { error } = await context.supabase
       .from("books")
       .update(patch)

@@ -4,14 +4,18 @@ export function AddBookForm({
   onSave,
   onCancel,
   saving,
+  initial,
+  submitLabel,
 }: {
   onSave: (v: { title: string; author: string; isbn: string }) => void;
   onCancel: () => void;
   saving?: boolean;
+  initial?: { title?: string; author?: string | null; isbn?: string | null };
+  submitLabel?: string;
 }) {
-  const [title, setTitle] = useState("");
-  const [author, setAuthor] = useState("");
-  const [isbn, setIsbn] = useState("");
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [author, setAuthor] = useState(initial?.author ?? "");
+  const [isbn, setIsbn] = useState(initial?.isbn ?? "");
   const titleRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { titleRef.current?.focus(); }, []);
@@ -61,7 +65,7 @@ export function AddBookForm({
             disabled={saving || !title.trim()}
             className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
           >
-            {saving ? "Saving…" : "Add book"}
+            {saving ? "Saving…" : (submitLabel ?? "Add book")}
           </button>
         </div>
       </div>
