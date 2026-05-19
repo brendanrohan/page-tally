@@ -48,6 +48,7 @@ function ShelvesPage() {
 
   const [shelf, setShelf] = useState<Shelf>("currently_reading");
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const { data: books = [], isLoading } = useQuery({
     queryKey: ["books"],
@@ -97,6 +98,16 @@ function ShelvesPage() {
     },
     onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["books"], ctx.prev); toast.error("Couldn't remove book."); },
     onSettled: () => qc.invalidateQueries({ queryKey: ["books"] }),
+  });
+
+  const editMut = useMutation({
+    mutationFn: (v: { id: string; title: string; author: string; isbn: string }) =>
+      update({ data: v }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["books"] });
+      setEditingId(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const signOut = async () => {
@@ -173,12 +184,25 @@ function ShelvesPage() {
             style={{ gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))" }}
           >
             {visible.map((b) => (
-              <BookCard
-                key={b.id}
-                book={b as Book}
-                onRate={(stars) => rateMut.mutate({ id: b.id, stars })}
-                onRemove={() => removeMut.mutate(b.id)}
-              />
+              editingId === b.id ? (
+                <div key={b.id} className="col-span-full">
+                  <AddBookForm
+                    initial={{ title: b.title, author: b.author, isbn: b.isbn }}
+                    submitLabel="Save changes"
+                    saving={editMut.isPending}
+                    onCancel={() => setEditingId(null)}
+                    onSave={(v) => editMut.mutate({ id: b.id, ...v })}
+                  />
+                </div>
+              ) : (
+                <BookCard
+                  key={b.id}
+                  book={b as Book}
+                  onRate={(stars) => rateMut.mutate({ id: b.id, stars })}
+                  onRemove={() => removeMut.mutate(b.id)}
+                  onEdit={() => setEditingId(b.id)}
+                />
+              )
             ))}
           </div>
         )}
