@@ -110,6 +110,21 @@ function ShelvesPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const moveMut = useMutation({
+    mutationFn: ({ id, shelf: s }: { id: string; shelf: Shelf }) =>
+      update({ data: { id, shelf: s } }),
+    onMutate: async ({ id, shelf: s }) => {
+      await qc.cancelQueries({ queryKey: ["books"] });
+      const prev = qc.getQueryData<Book[]>(["books"]);
+      qc.setQueryData<Book[]>(["books"], (old) =>
+        (old ?? []).map((b) => (b.id === id ? { ...b, shelf: s } : b)),
+      );
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["books"], ctx.prev); toast.error("Couldn't move book."); },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["books"] }),
+  });
+
   const signOut = async () => {
     await supabase.auth.signOut();
     navigate({ to: "/login" });
@@ -201,7 +216,7 @@ function ShelvesPage() {
                   onRate={(stars) => rateMut.mutate({ id: b.id, stars })}
                   onRemove={() => removeMut.mutate(b.id)}
                   onEdit={() => setEditingId(b.id)}
-                  onMove={(s) => rateMut.mutate.length && update({ data: { id: b.id, shelf: s as Shelf } }).then(() => qc.invalidateQueries({ queryKey: ["books"] }))}
+                  onMove={(s) => moveMut.mutate({ id: b.id, shelf: s as Shelf })}
                 />
               )
             ))}
