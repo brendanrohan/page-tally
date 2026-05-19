@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Star, X } from "lucide-react";
+import { Star, X, Pencil } from "lucide-react";
 
 export type Book = {
   id: string;
@@ -22,10 +22,12 @@ export function BookCard({
   book,
   onRate,
   onRemove,
+  onEdit,
 }: {
   book: Book;
   onRate: (stars: number) => void;
   onRemove: () => void;
+  onEdit: () => void;
 }) {
   const [imgFailed, setImgFailed] = useState(false);
   const url = coverUrl(book.isbn);
@@ -56,13 +58,22 @@ export function BookCard({
           </div>
         )}
 
-        <button
-          onClick={onRemove}
-          aria-label="Remove book"
-          className="absolute top-1.5 right-1.5 rounded-full bg-background/90 backdrop-blur p-1 opacity-0 group-hover:opacity-100 transition shadow hover:bg-destructive hover:text-destructive-foreground"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
+        <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition">
+          <button
+            onClick={onEdit}
+            aria-label="Edit book"
+            className="rounded-full bg-background/90 backdrop-blur p-1 shadow hover:bg-accent hover:text-accent-foreground"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={onRemove}
+            aria-label="Remove book"
+            className="rounded-full bg-background/90 backdrop-blur p-1 shadow hover:bg-destructive hover:text-destructive-foreground"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       <div className="mt-2 px-0.5">
