@@ -201,6 +201,7 @@ function ShelvesPage() {
                   onRate={(stars) => rateMut.mutate({ id: b.id, stars })}
                   onRemove={() => removeMut.mutate(b.id)}
                   onEdit={() => setEditingId(b.id)}
+                  onMove={(s) => rateMut.mutate.length && update({ data: { id: b.id, shelf: s as Shelf } }).then(() => qc.invalidateQueries({ queryKey: ["books"] }))}
                 />
               )
             ))}
