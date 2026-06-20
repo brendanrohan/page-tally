@@ -24,6 +24,13 @@ const SHELF_LABELS: Record<Shelf, string> = {
   finished: "Finished",
 };
 
+const SHELF_COLOR: Record<Shelf, string> = {
+  currently_reading: "var(--color-shelf-reading)",
+  on_hold: "var(--color-shelf-hold)",
+  to_read: "var(--color-shelf-toread)",
+  finished: "var(--color-shelf-finished)",
+};
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -46,7 +53,6 @@ function ShelvesPage() {
   const update = useServerFn(updateBook);
   const remove = useServerFn(deleteBook);
 
-  const [shelf, setShelf] = useState<Shelf>("currently_reading");
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -61,11 +67,15 @@ function ShelvesPage() {
     return c;
   }, [books]);
 
-  const visible = books.filter((b) => b.shelf === shelf);
+  const byShelf = useMemo(() => {
+    const m: Record<Shelf, Book[]> = { currently_reading: [], on_hold: [], to_read: [], finished: [] };
+    for (const b of books) (m[b.shelf as Shelf] ||= []).push(b as Book);
+    return m;
+  }, [books]);
 
   const addMut = useMutation({
     mutationFn: (v: { title: string; author: string; isbn: string }) =>
-      add({ data: { ...v, shelf } }),
+      add({ data: { ...v, shelf: "currently_reading" } }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["books"] });
       setAdding(false);
@@ -148,25 +158,6 @@ function ShelvesPage() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-8">
-        <nav className="flex flex-wrap gap-1 border-b border-border mb-6 -mx-1">
-          {SHELVES.map((s) => {
-            const active = s === shelf;
-            return (
-              <button
-                key={s}
-                onClick={() => setShelf(s)}
-                className={`relative px-3 py-2.5 text-sm font-medium transition flex items-center gap-2 ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-              >
-                <span className="font-serif">{SHELF_LABELS[s]}</span>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${active ? "bg-accent text-accent-foreground" : "bg-secondary text-muted-foreground"}`}>
-                  {counts[s]}
-                </span>
-                {active && <span className="absolute left-0 right-0 -bottom-px h-0.5 bg-accent" />}
-              </button>
-            );
-          })}
-        </nav>
-
         <div className="mb-6">
           {adding ? (
             <AddBookForm
@@ -186,40 +177,64 @@ function ShelvesPage() {
 
         {isLoading ? (
           <p className="text-sm text-muted-foreground italic">Pulling books from the shelf…</p>
-        ) : visible.length === 0 ? (
-          <div className="py-16 text-center">
-            <p className="font-serif italic text-lg text-muted-foreground">
-              No books on this shelf yet.
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">Add one above to get started.</p>
-          </div>
         ) : (
-          <div
-            className="grid gap-x-5 gap-y-7"
-            style={{ gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))" }}
-          >
-            {visible.map((b) => (
-              editingId === b.id ? (
-                <div key={b.id} className="col-span-full">
-                  <AddBookForm
-                    initial={{ title: b.title, author: b.author, isbn: b.isbn }}
-                    submitLabel="Save changes"
-                    saving={editMut.isPending}
-                    onCancel={() => setEditingId(null)}
-                    onSave={(v) => editMut.mutate({ id: b.id, ...v })}
-                  />
-                </div>
-              ) : (
-                <BookCard
-                  key={b.id}
-                  book={b as Book}
-                  onRate={(stars) => rateMut.mutate({ id: b.id, stars })}
-                  onRemove={() => removeMut.mutate(b.id)}
-                  onEdit={() => setEditingId(b.id)}
-                  onMove={(s) => moveMut.mutate({ id: b.id, shelf: s as Shelf })}
-                />
-              )
-            ))}
+          <div className="space-y-8">
+            {SHELVES.map((s) => {
+              const items = byShelf[s];
+              const color = SHELF_COLOR[s];
+              return (
+                <section key={s} className="relative">
+                  <div
+                    className="flex items-baseline gap-3 pl-4 border-l-4 mb-3"
+                    style={{ borderColor: color }}
+                  >
+                    <h2 className="font-serif text-xl tracking-tight">{SHELF_LABELS[s]}</h2>
+                    <span
+                      className="text-[11px] uppercase tracking-wider font-medium"
+                      style={{ color }}
+                    >
+                      {counts[s]} {counts[s] === 1 ? "book" : "books"}
+                    </span>
+                  </div>
+                  <div
+                    className="rounded-md pl-4 pr-2 py-4 border-l-4 bg-card/40"
+                    style={{ borderColor: color }}
+                  >
+                    {items.length === 0 ? (
+                      <p className="text-sm italic text-muted-foreground py-6">
+                        Nothing here yet.
+                      </p>
+                    ) : (
+                      <div className="flex gap-5 overflow-x-auto pb-2 -mx-1 px-1">
+                        {items.map((b) =>
+                          editingId === b.id ? (
+                            <div key={b.id} className="w-full min-w-0">
+                              <AddBookForm
+                                initial={{ title: b.title, author: b.author, isbn: b.isbn }}
+                                submitLabel="Save changes"
+                                saving={editMut.isPending}
+                                onCancel={() => setEditingId(null)}
+                                onSave={(v) => editMut.mutate({ id: b.id, ...v })}
+                              />
+                            </div>
+                          ) : (
+                            <div key={b.id} className="w-[140px] shrink-0">
+                              <BookCard
+                                book={b}
+                                onRate={(stars) => rateMut.mutate({ id: b.id, stars })}
+                                onRemove={() => removeMut.mutate(b.id)}
+                                onEdit={() => setEditingId(b.id)}
+                                onMove={(ns) => moveMut.mutate({ id: b.id, shelf: ns as Shelf })}
+                              />
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         )}
       </main>
