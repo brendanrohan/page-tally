@@ -1,16 +1,24 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/integrations/supabase/types";
 
 export const SHELVES = ["currently_reading", "on_hold", "to_read", "finished"] as const;
 export type Shelf = (typeof SHELVES)[number];
 
 const shelfSchema = z.enum(SHELVES);
 
+function getClient() {
+  return createClient<Database>(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_PUBLISHABLE_KEY!,
+    { auth: { storage: undefined, persistSession: false, autoRefreshToken: false } },
+  );
+}
+
 export const listBooks = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+  .handler(async () => {
+    const { data, error } = await getClient()
       .from("books")
       .select("id, title, author, isbn, shelf, stars, created_at")
       .order("created_at", { ascending: false });
@@ -19,7 +27,6 @@ export const listBooks = createServerFn({ method: "GET" })
   });
 
 export const addBook = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
     z.object({
       title: z.string().trim().min(1).max(300),
@@ -28,11 +35,10 @@ export const addBook = createServerFn({ method: "POST" })
       shelf: shelfSchema.default("to_read"),
     }).parse(input),
   )
-  .handler(async ({ data, context }) => {
-    const { data: row, error } = await context.supabase
+  .handler(async ({ data }) => {
+    const { data: row, error } = await getClient()
       .from("books")
       .insert({
-        user_id: context.userId,
         title: data.title,
         author: data.author || null,
         isbn: data.isbn || null,
@@ -45,7 +51,6 @@ export const addBook = createServerFn({ method: "POST" })
   });
 
 export const updateBook = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((input) =>
     z.object({
       id: z.string().uuid(),
@@ -56,14 +61,14 @@ export const updateBook = createServerFn({ method: "POST" })
       isbn: z.string().trim().max(20).optional(),
     }).parse(input),
   )
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data }) => {
     const patch: { shelf?: Shelf; stars?: number; title?: string; author?: string | null; isbn?: string | null } = {};
     if (data.shelf !== undefined) patch.shelf = data.shelf;
     if (data.stars !== undefined) patch.stars = data.stars;
     if (data.title !== undefined) patch.title = data.title;
     if (data.author !== undefined) patch.author = data.author || null;
     if (data.isbn !== undefined) patch.isbn = data.isbn || null;
-    const { error } = await context.supabase
+    const { error } = await getClient()
       .from("books")
       .update(patch)
       .eq("id", data.id);
@@ -72,10 +77,9 @@ export const updateBook = createServerFn({ method: "POST" })
   });
 
 export const deleteBook = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .inputValidator((input) => z.object({ id: z.string().uuid() }).parse(input))
-  .handler(async ({ data, context }) => {
-    const { error } = await context.supabase.from("books").delete().eq("id", data.id);
+  .handler(async ({ data }) => {
+    const { error } = await getClient().from("books").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
