@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, BookOpen, LogOut } from "lucide-react";
+import { Plus, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 
-import { supabase } from "@/integrations/supabase/client";
 import {
   addBook,
   deleteBook,
@@ -31,15 +30,10 @@ export const Route = createFileRoute("/")({
       { name: "description", content: "Track the books you're reading, holding, planning, and have finished." },
     ],
   }),
-  beforeLoad: async () => {
-    const { data } = await supabase.auth.getSession();
-    if (!data.session) throw redirect({ to: "/login" });
-  },
   component: ShelvesPage,
 });
 
 function ShelvesPage() {
-  const navigate = useNavigate();
   const qc = useQueryClient();
   const list = useServerFn(listBooks);
   const add = useServerFn(addBook);
@@ -125,25 +119,12 @@ function ShelvesPage() {
     onSettled: () => qc.invalidateQueries({ queryKey: ["books"] }),
   });
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    navigate({ to: "/login" });
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border/60">
-        <div className="max-w-6xl mx-auto px-6 py-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <BookOpen className="h-5 w-5 text-accent" />
-            <h1 className="font-serif text-2xl tracking-tight">My Reading Life</h1>
-          </div>
-          <button
-            onClick={signOut}
-            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5"
-          >
-            <LogOut className="h-3.5 w-3.5" /> Sign out
-          </button>
+        <div className="max-w-6xl mx-auto px-6 py-6 flex items-center gap-3">
+          <BookOpen className="h-5 w-5 text-accent" />
+          <h1 className="font-serif text-2xl tracking-tight">My Reading Life</h1>
         </div>
       </header>
 
