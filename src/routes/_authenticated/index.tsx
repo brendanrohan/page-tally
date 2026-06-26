@@ -23,7 +23,7 @@ const SHELF_LABELS: Record<Shelf, string> = {
   finished: "Finished",
 };
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
       { title: "My Reading Life" },
