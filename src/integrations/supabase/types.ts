@@ -23,7 +23,7 @@ export type Database = {
           shelf: string
           stars: number
           title: string
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           author?: string | null
@@ -33,7 +33,7 @@ export type Database = {
           shelf?: string
           stars?: number
           title: string
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           author?: string | null
@@ -43,7 +43,7 @@ export type Database = {
           shelf?: string
           stars?: number
           title?: string
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
