@@ -34,11 +34,11 @@ jobs:
       - name: Build Production Static Files
         run: bun run build
 
-      - name: Inspect Build Directories (Debug) # <-- Added to find your hidden folder!
+      - name: Inspect Build Directories (Debug)
         run: |
-          echo "=== Root Directory Check ==="
-          ls -la
-          echo "============================"
+          echo "=== Checking inside hidden .output folder ==="
+          ls -la .output
+          echo "============================================="
 
       - name: Setup GitHub Pages Configuration
         uses: actions/configure-pages@v5
@@ -46,4 +46,4 @@ jobs:
       - name: Upload Build Artifacts
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist' # We will adjust this once we see the log names
+          path: './.output/public' 
