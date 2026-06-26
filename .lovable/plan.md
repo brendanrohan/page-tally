@@ -1,38 +1,38 @@
-## Goal
+# Fix books not loading on `page-tally.brdnrohan.workers.dev`
 
-Make the app single-user with no sign-in. Remove the login page, the auth gate on `/`, and the sign-out button. Keep all existing books visible and editable.
+## What's actually wrong
 
-## Approach
+- Your Cloudflare Worker deployment loads the page fine (HTTP 200).
+- Every call to a book server function (`listBooks`, `addBook`, etc.) returns **HTTP 500**.
+- Cause: the Worker has no `SUPABASE_URL` or `SUPABASE_PUBLISHABLE_KEY` available at runtime, so the `requireSupabaseAuth` middleware throws before any query runs.
 
-Since this is personal-use only, treat the app as one shared shelf. The backend stops checking who you are; the frontend stops asking you to sign in. Your existing books stay where they are.
+These vars are **server-side, runtime** — Cloudflare injects them per request. They are *not* the `VITE_*` vars (those get baked into the client bundle at build time and only the browser sees them).
 
-## Changes
+## Fix (no code changes needed)
 
-1. **Remove the login screen**
-   - Delete `src/routes/login.tsx`.
-   - Remove the `beforeLoad` auth check and the "Sign out" button/header action on `src/routes/index.tsx`.
+You add two variables to your Worker in the Cloudflare dashboard:
 
-2. **Open up the backend for personal use**
-   - Migration on the `books` table:
-     - Make `user_id` nullable (existing rows keep their current `user_id` so nothing is lost).
-     - Replace the per-user RLS policies with a single open policy that allows read/insert/update/delete to anyone (`USING (true)`), and grant the needed privileges to the `anon` role.
-   - Rewrite `src/lib/books.functions.ts` so each server function uses a server-side publishable Supabase client instead of `requireSupabaseAuth`. Inserts no longer set `user_id`.
-   - Leave `src/integrations/supabase/*` (auto-generated) and `src/start.ts` untouched.
+```text
+SUPABASE_URL              = https://rticqcrapoarubjncblv.supabase.co
+SUPABASE_PUBLISHABLE_KEY  = <your publishable/anon key from .env>
+```
 
-3. **Light cleanup**
-   - Remove the `/login` link/import usage from `index.tsx`.
-   - Leave the Supabase client file in place (still used by the server functions and the existing auth bridge); no schema changes beyond `books`.
+Steps in Cloudflare:
+1. Cloudflare dashboard → **Workers & Pages** → select **page-tally**.
+2. **Settings → Variables and Secrets** (or "Environment Variables").
+3. Add the two variables above for the **Production** environment. Plain text is fine — these are publishable, not secret.
+4. Save. Cloudflare will prompt to redeploy (or you can re-run your deploy).
 
-## Technical notes
+## Verification
 
-- Existing rows are preserved: the migration only alters the column nullability and swaps policies; no data is deleted or rewritten.
-- Server functions move from `requireSupabaseAuth` (which requires a bearer token) to a server-local client built from `SUPABASE_URL` + `SUPABASE_PUBLISHABLE_KEY`, relying on the new open RLS policy.
-- The `_authenticated` folder is not used in this project, so no protected layout needs updating.
-- Security tradeoff: anyone who knows the published URL can read and edit the shelf. That matches the "personal use" intent you described. If you ever want to lock it back down, we re-add the auth middleware and per-user policies.
+After redeploy, I'll re-hit the server function endpoint and confirm it returns 200 instead of 500. Then your books should appear on `page-tally.brdnrohan.workers.dev` after login.
 
-## Files touched
+## Things this plan deliberately doesn't change
 
-- delete `src/routes/login.tsx`
-- edit `src/routes/index.tsx` (drop auth gate, sign-out UI)
-- edit `src/lib/books.functions.ts` (drop auth middleware, use publishable server client, stop setting user_id)
-- new migration: relax `books` RLS + make `user_id` nullable
+- **No code edits.** Your local Lovable preview and `page-tally.lovable.app` already work because their env is provisioned automatically. Adding env vars on Cloudflare is purely an ops/config fix.
+- **Doesn't touch the GitHub Actions workflow.** That workflow still targets GitHub Pages (static-only, won't ever run server functions). If you stop using it, you can delete `.github/workflows/deploy.yml` later — not needed for this fix.
+- **No service-role key on the Worker.** Server functions only need the publishable key + the user's bearer token; that's enough for RLS to scope queries to the logged-in user.
+
+## Heads-up about future updates
+
+Right now your Cloudflare Worker is deployed from outside Lovable, so it won't auto-update when you make changes in the editor. Any change to server functions, routes, or schema in Lovable requires you to redeploy the Worker yourself (push to the repo / re-run wrangler / however you deploy it) before it shows up on `page-tally.brdnrohan.workers.dev`. The Lovable-hosted `page-tally.lovable.app` will always be the most up-to-date copy.
