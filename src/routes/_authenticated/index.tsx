@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Plus, BookOpen } from "lucide-react";
+import { Plus, BookOpen, LogOut } from "lucide-react";
 import { toast } from "sonner";
 
+import { supabase } from "@/integrations/supabase/client";
 import {
   addBook,
   deleteBook,
@@ -23,10 +24,10 @@ const SHELF_LABELS: Record<Shelf, string> = {
   finished: "Finished",
 };
 
-export const Route = createFileRoute("/")({
+export const Route = createFileRoute("/_authenticated/")({
   head: () => ({
     meta: [
-      { title: "My Reading Life" },
+      { title: "Book Loggins" },
       { name: "description", content: "Track the books you're reading, holding, planning, and have finished." },
     ],
   }),
@@ -35,6 +36,7 @@ export const Route = createFileRoute("/")({
 
 function ShelvesPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const list = useServerFn(listBooks);
   const add = useServerFn(addBook);
   const update = useServerFn(updateBook);
@@ -56,6 +58,13 @@ function ShelvesPage() {
   }, [books]);
 
   const visible = books.filter((b) => b.shelf === shelf);
+
+  const signOut = async () => {
+    await qc.cancelQueries();
+    qc.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/auth", replace: true });
+  };
 
   const addMut = useMutation({
     mutationFn: (v: { title: string; author: string; isbn: string }) =>
@@ -125,6 +134,13 @@ function ShelvesPage() {
         <div className="max-w-6xl mx-auto px-6 py-6 flex items-center gap-3">
           <BookOpen className="h-5 w-5 text-accent" />
           <h1 className="font-serif text-2xl tracking-tight">Book Loggins</h1>
+          <button
+            onClick={signOut}
+            title="Sign out"
+            className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition"
+          >
+            <LogOut className="h-3.5 w-3.5" /> Sign out
+          </button>
         </div>
       </header>
 
