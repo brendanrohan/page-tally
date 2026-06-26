@@ -1,0 +1,1 @@
+UPDATE public.books SET user_id = 'af45e850-bf67-4028-88bf-49523b1907c1' WHERE user_id = '39564ba5-6543-44bf-b424-1f160702d097';
