@@ -124,7 +124,7 @@ function ShelvesPage() {
       <header className="border-b border-border/60">
         <div className="max-w-6xl mx-auto px-6 py-6 flex items-center gap-3">
           <BookOpen className="h-5 w-5 text-accent" />
-          <h1 className="font-serif text-2xl tracking-tight">My Reading Life</h1>
+          <h1 className="font-serif text-2xl tracking-tight">Book Loggins</h1>
         </div>
       </header>
 
